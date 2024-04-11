@@ -5,8 +5,9 @@ namespace Talabat.APIs
 {
 	public class Program
 	{
-		public static void Main(string[] args)
+		public static async Task Main(string[] args)
 		{
+
 			var builder = WebApplication.CreateBuilder(args);
 
 			// Add services to the container.
@@ -19,10 +20,27 @@ namespace Talabat.APIs
 			builder.Services.AddDbContext<StoreContext>(options=>
 			{
 				options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-			}
-				);
+			});
 
 			var app = builder.Build();
+
+
+			using var scope = app.Services.CreateScope();
+			var services = scope.ServiceProvider;
+			var _dbContext = services.GetRequiredService<StoreContext>();
+			// ASK CLR for Creating Object from DbContext Explicitly
+
+			var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+			try
+			{
+				await _dbContext.Database.MigrateAsync(); // Update-Database
+			}
+			catch (Exception ex)
+			{
+				//Console.WriteLine(ex);
+				var logger = loggerFactory.CreateLogger<Program>();
+				logger.LogError(ex, "an error has been occured during apply the migration");
+			}
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
