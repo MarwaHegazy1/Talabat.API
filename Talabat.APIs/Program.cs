@@ -64,6 +64,6 @@ namespace Talabat.APIs
 			app.MapControllers();
 
 			app.Run();
-		}
+		} 
 	}
 }
