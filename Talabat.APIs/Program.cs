@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
+using System.Text.Json;
 using Talabat.APIs.Errors;
 using Talabat.APIs.Helpers;
 using Talabat.APIs.Middlewares;
@@ -56,6 +58,7 @@ namespace Talabat.APIs
 			// ASK CLR for Creating Object from DbContext Explicitly
 
 			var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+				var logger = loggerFactory.CreateLogger<Program>();
 			try
 			{
 				await _dbContext.Database.MigrateAsync(); // Update-Database
@@ -64,12 +67,33 @@ namespace Talabat.APIs
 			catch (Exception ex)
 			{
 				//Console.WriteLine(ex);
-				var logger = loggerFactory.CreateLogger<Program>();
 				logger.LogError(ex, "an error has been occured during apply the migration");
 			}
 
 
-			app.UseMiddleware<ExceptionMiddleware>();
+			//app.UseMiddleware<ExceptionMiddleware>();
+			app.Use(async (httpContext, _next) =>
+			{
+				try
+				{
+					await _next.Invoke(httpContext);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex.Message);
+
+					httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+					httpContext.Response.ContentType = "application/json";
+
+					var response = builder.Environment.IsDevelopment() ?
+						new ApiExceptionResponse((int)HttpStatusCode.InternalServerError, ex.Message, ex.StackTrace.ToString())
+						: new ApiExceptionResponse((int)HttpStatusCode.InternalServerError);
+
+					var options = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+					var json = JsonSerializer.Serialize(response, options);
+					await httpContext.Response.WriteAsync(json);
+				}
+			});
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())

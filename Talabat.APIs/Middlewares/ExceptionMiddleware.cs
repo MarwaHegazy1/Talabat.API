@@ -5,7 +5,7 @@ using Talabat.APIs.Errors;
 
 namespace Talabat.APIs.Middlewares
 {
-	public class ExceptionMiddleware
+	public class ExceptionMiddleware 
 	{
 		private readonly RequestDelegate _next;
 		private readonly ILogger<ExceptionMiddleware> _logger;
