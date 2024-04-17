@@ -71,29 +71,7 @@ namespace Talabat.APIs
 			}
 
 
-			//app.UseMiddleware<ExceptionMiddleware>();
-			app.Use(async (httpContext, _next) =>
-			{
-				try
-				{
-					await _next.Invoke(httpContext);
-				}
-				catch (Exception ex)
-				{
-					logger.LogError(ex.Message);
-
-					httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-					httpContext.Response.ContentType = "application/json";
-
-					var response = builder.Environment.IsDevelopment() ?
-						new ApiExceptionResponse((int)HttpStatusCode.InternalServerError, ex.Message, ex.StackTrace.ToString())
-						: new ApiExceptionResponse((int)HttpStatusCode.InternalServerError);
-
-					var options = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-					var json = JsonSerializer.Serialize(response, options);
-					await httpContext.Response.WriteAsync(json);
-				}
-			});
+			app.UseMiddleware<ExceptionMiddleware>();
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
@@ -101,6 +79,8 @@ namespace Talabat.APIs
 				app.UseSwagger();
 				app.UseSwaggerUI();
 			}
+
+			app.UseStatusCodePagesWithReExecute("/errors/{0}"); 
 
 			app.UseHttpsRedirection();
 
